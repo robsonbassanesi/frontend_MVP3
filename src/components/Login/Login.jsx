@@ -12,6 +12,38 @@ import DTDLogo from '../../assets/DTDLogo.png';
 export function Login() {
   const [user, setUser] = useState({});
 
+  function sendUserDataToServer(data) {
+    // Crie um objeto com os campos renomeados
+    const postData = {
+      display_name: data.displayName,
+      email: data.email,
+      photo_url: data.photoURL
+    };
+
+    // Faça a requisição POST para o seu servidor
+    fetch('http://127.0.0.1:4500/user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(postData)
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Erro ao enviar dados ao servidor');
+        }
+        return response.json();
+      })
+      .then(responseData => {
+        // Lidar com a resposta do servidor, se necessário
+        console.log('Resposta do servidor:', responseData);
+      })
+      .catch(error => {
+        // Lidar com erros
+        console.error('Erro ao enviar dados ao servidor:', error);
+      });
+  }
+
   function handleGoogleLogin() {
     const provider = new GoogleAuthProvider();
     signInWithPopup(auth, provider)
@@ -20,6 +52,10 @@ export function Login() {
           alert('Usuário já logado');
         } else {
           setUser(result.user);
+          console.log(result.user);
+
+          // Chame a função para enviar os dados ao servidor
+          sendUserDataToServer(result.user);
         }
       })
       .catch(error => {
@@ -35,13 +71,15 @@ export function Login() {
           alert('Usuário já logado');
         } else {
           setUser(result.user);
+
+          // Chame a função para enviar os dados ao servidor
+          sendUserDataToServer(result.user);
         }
       })
       .catch(error => {
         console.log(error);
       });
   }
-
   return (
     <>
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 sm:py-12">

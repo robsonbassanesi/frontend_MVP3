@@ -6,9 +6,9 @@ import { SalesTable } from './components/SalesTable/SalesTable';
 function App() {
   return (
     <>
-      <Login />
-      <Header />
-      <SalesModal />
+      {/* <Login /> */}
+      {/* <Header /> */}
+      {/* <SalesModal /> */}
       <SalesTable />
     </>
   );
