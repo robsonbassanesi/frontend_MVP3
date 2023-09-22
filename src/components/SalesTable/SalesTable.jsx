@@ -7,26 +7,53 @@ import { useContext } from 'react';
 
 export function SalesTable() {
   const [sales, setSales] = useState([]);
+  console.log(sales.length);
   const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
   const [form, setForm] = useState({
     customer: '',
     product: '',
     category: '',
     amount: '',
-    unitary_value: ''
+    unitary_value: '',
+    user_id: ''
   });
   const [userData, setUserData] = useState({
     display_name: '',
-    photo_url: ''
+    photo_url: '',
+    user_id: 0
   });
+  const [newuser, setNewUser] = useState(null);
+  const [signed, setSigned] = useState(false);
   const { user, singOut } = useContext(AuthContext);
+  const [cotacao, setCotacao] = useState(null);
+
+  const getSales = async userId => {
+    try {
+      const url = 'http://127.0.0.1:4500/sales?user_id=' + userId;
+      const response = await fetch(url);
+
+      if (response.ok) {
+        const data = await response.json();
+        setSales(data.sales);
+      } else {
+        console.error('Erro ao buscar vendas:', response.status);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar vendas:', error);
+    }
+  };
 
   useEffect(() => {
-    // Faça uma solicitação ao servidor para obter as vendas cadastradas
-    fetch('http://127.0.0.1:4500/sales')
-      .then(response => response.json())
-      .then(data => setSales(data.sales))
-      .catch(error => console.error('Erro ao buscar vendas:', error));
+    // Tente obter os dados do usuário do localStorage
+    const savedUserData = localStorage.getItem('userData');
+
+    if (savedUserData) {
+      // Se os dados do usuário estiverem no localStorage, atualize o estado e o estado signed
+      const userData = JSON.parse(savedUserData);
+      setNewUser(userData);
+      setSigned(true); // Usuário está logado
+      getSales(userData.user_id); // Obter vendas quando o usuário está logado
+    }
   }, []);
 
   const dataForm = e => {
@@ -41,7 +68,7 @@ export function SalesTable() {
     formData.append('category', form.category);
     formData.append('amount', form.amount);
     formData.append('unitary_value', form.unitary_value);
-    console.log(formData);
+    formData.append('user_id', userData.user_id);
 
     axios.post('http://127.0.0.1:4500/sale', formData).catch(error => {
       console.log(error);
@@ -49,7 +76,6 @@ export function SalesTable() {
   }
 
   function handleDeleteSale(id) {
-    console.log(id);
     let url = 'http://127.0.0.1:4500/sale?sale_id=' + id;
 
     fetch(url, {
@@ -85,12 +111,13 @@ export function SalesTable() {
         .then(response => response.json())
         .then(data => {
           // Extrair display_name e photo_url dos dados
-          const { display_name, photo_url } = data;
+          const { display_name, photo_url, id } = data;
 
           // Atualizar o estado com os dados do usuário
           setUserData({
             display_name: display_name,
-            photo_url: photo_url
+            photo_url: photo_url,
+            user_id: id
           });
 
           // Salvar os dados do usuário no localStorage
@@ -98,7 +125,8 @@ export function SalesTable() {
             'userData',
             JSON.stringify({
               display_name: display_name,
-              photo_url: photo_url
+              photo_url: photo_url,
+              user_id: id
             })
           );
         })
@@ -107,8 +135,6 @@ export function SalesTable() {
         );
     }
   }, []);
-
-  const [cotacao, setCotacao] = useState(null);
 
   useEffect(() => {
     // Função para buscar a cotação do dólar
