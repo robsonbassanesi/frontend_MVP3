@@ -1,17 +1,26 @@
 import { useState, useEffect } from 'react';
+import axios from 'axios';
+import { FaTrashAlt } from 'react-icons/fa';
+import { NumericFormat } from 'react-number-format';
+import { AuthContext } from '../../context/AuthContext';
+import { useContext } from 'react';
 
 export function SalesTable() {
   const [sales, setSales] = useState([]);
   const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
-  const [newSaleData, setNewSaleData] = useState({
+  const [form, setForm] = useState({
     customer: '',
     product: '',
     category: '',
-    amount: 0,
-    unitary_value: 0,
-    total: 0 // Adicione um estado para o total
+    amount: '',
+    unitary_value: ''
   });
-  console.log(newSaleData);
+  const [userData, setUserData] = useState({
+    display_name: '',
+    photo_url: ''
+  });
+  const { user, singOut } = useContext(AuthContext);
+
   useEffect(() => {
     // Faça uma solicitação ao servidor para obter as vendas cadastradas
     fetch('http://127.0.0.1:4500/sales')
@@ -20,81 +29,201 @@ export function SalesTable() {
       .catch(error => console.error('Erro ao buscar vendas:', error));
   }, []);
 
-  // Função para calcular o total com base em amount e unitary_value
-  const calculateTotal = () => {
-    const amount = parseFloat(newSaleData.amount);
-    const unitaryValue = parseFloat(newSaleData.unitary_value);
-    if (!isNaN(amount) && !isNaN(unitaryValue)) {
-      return amount * unitaryValue;
-    }
-    return 0;
+  const dataForm = e => {
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
   };
 
-  const handleNewSaleSubmit = event => {
-    event.preventDefault();
+  async function createSale() {
+    const formData = new FormData();
+    formData.append('customer', form.customer);
+    formData.append('product', form.product);
+    formData.append('category', form.category);
+    formData.append('amount', form.amount);
+    formData.append('unitary_value', form.unitary_value);
+    console.log(formData);
 
-    // Calcula o total antes de enviar para o servidor
-    const total = calculateTotal();
+    axios.post('http://127.0.0.1:4500/sale', formData).catch(error => {
+      console.log(error);
+    });
+  }
 
-    // Atualiza o estado de newSaleData com o total calculado
-    setNewSaleData({ ...newSaleData, total });
+  function handleDeleteSale(id) {
+    console.log(id);
+    let url = 'http://127.0.0.1:4500/sale?sale_id=' + id;
 
-    // Faça uma solicitação POST ao servidor para adicionar uma nova venda
-    fetch('http://127.0.0.1:4500/sale', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(newSaleData)
+    fetch(url, {
+      method: 'DELETE'
     })
-      .then(response => response.json())
-      .then(data => {
-        // Atualize a lista de vendas com a nova venda
-        setSales([...sales, data]);
-        setIsNewSaleModalOpen(false);
-        // Limpe os dados do formulário e reset o total
-        setNewSaleData({
-          customer: '',
-          product: '',
-          category: '',
-          amount: 0,
-          unitary_value: 0,
-          total: 0
-        });
+      .then(response => {
+        if (response.status === 200) {
+          // A exclusão foi bem-sucedida, recarregue a página
+          window.location.reload();
+        }
+        return response.json();
       })
-      .catch(error => console.error('Erro ao adicionar venda:', error));
-  };
+      .catch(error => {
+        console.error('Erro:', error);
+      });
+  }
+
+  useEffect(() => {
+    // Tente obter os dados do usuário do localStorage
+    const savedUserData = localStorage.getItem('userData');
+    const userId = user.id;
+
+    if (savedUserData) {
+      // Se os dados do usuário estiverem no localStorage, atualize o estado
+      setUserData(JSON.parse(savedUserData));
+    } else {
+      // Caso contrário, faça uma solicitação ao servidor para obter os dados do usuário
+      const url = 'http://127.0.0.1:4500/user?user_id=' + userId;
+
+      fetch(url, {
+        method: 'GET'
+      })
+        .then(response => response.json())
+        .then(data => {
+          // Extrair display_name e photo_url dos dados
+          const { display_name, photo_url } = data;
+
+          // Atualizar o estado com os dados do usuário
+          setUserData({
+            display_name: display_name,
+            photo_url: photo_url
+          });
+
+          // Salvar os dados do usuário no localStorage
+          localStorage.setItem(
+            'userData',
+            JSON.stringify({
+              display_name: display_name,
+              photo_url: photo_url
+            })
+          );
+        })
+        .catch(error =>
+          console.error('Erro ao buscar dados do usuário:', error)
+        );
+    }
+  }, []);
+
+  const [cotacao, setCotacao] = useState(null);
+
+  useEffect(() => {
+    // Função para buscar a cotação do dólar
+    const fetchDollarCotacao = async () => {
+      try {
+        const response = await fetch(
+          'http://economia.awesomeapi.com.br/json/USD-BRL/1'
+        );
+        const data = await response.json();
+
+        // Extrair o valor da cotação do dólar dos dados
+        const cotacaoAtualizada = data[0]?.ask;
+
+        if (cotacaoAtualizada) {
+          setCotacao(cotacaoAtualizada);
+        } else {
+          console.error('Não foi possível obter a cotação do dólar.');
+        }
+      } catch (error) {
+        console.error('Erro ao buscar cotação do dólar:', error);
+      }
+    };
+
+    // Chamar a função imediatamente para obter a primeira cotação
+    fetchDollarCotacao();
+
+    // Configurar um intervalo para buscar a cotação a cada 30 segundos
+    const intervalId = setInterval(fetchDollarCotacao, 30000);
+
+    // Limpar o intervalo quando o componente é desmontado
+    return () => clearInterval(intervalId);
+  }, []);
 
   return (
-    <div className="min-h-screen p-8 bg-gray-100">
-      <h1 className="mb-8 text-3xl font-bold">Vendas Cadastradas</h1>
-      <button
-        className="absolute px-4 py-2 text-white bg-blue-500 rounded-full top-4 right-4"
-        onClick={() => setIsNewSaleModalOpen(true)}
-      >
-        Adicionar Venda
-      </button>
+    <div className="min-h-screen p-8 bg-gray-100 ">
+      <div className="flex items-center justify-around">
+        <h1 className="text-3xl font-bold ">Vendas Cadastradas</h1>
+        <button
+          className="items-end px-4 py-2 text-white bg-blue-500 rounded-full"
+          onClick={() => setIsNewSaleModalOpen(true)}
+        >
+          Adicionar Venda
+        </button>
+        <div className="flex flex-col items-center justify-center text-xl font-bold">
+          <h2>Cotação do Dólar</h2>
+          {cotacao !== null ? (
+            <p>USD para BRL: {cotacao}</p>
+          ) : (
+            <p>Carregando cotação...</p>
+          )}
+        </div>
+        <div className="flex items-center justify-center gap-5">
+          <h1 className="text-lg font-bold">{userData.display_name}</h1>
+          <img className="w-40 rounded-full" src={userData.photo_url} alt="" />
+        </div>
+        <button
+          type="button"
+          onClick={singOut}
+          className="text-black font-bold bg-yellow-400 hover:bg-yellow-500 focus:outline-none focus:ring-4 focus:ring-yellow-300 rounded-full text-sm px-5 py-2.5 text-center mr-2 mb-2 dark:focus:ring-yellow-900"
+        >
+          Sair
+        </button>
+      </div>
+
       <table className="w-full mt-12 bg-white rounded-lg shadow-md">
         <thead>
-          <tr className="bg-gray-200">
+          <tr className="text-xl bg-gray-200">
             <th className="px-4 py-2">Cliente</th>
             <th className="px-4 py-2">Produto</th>
             <th className="px-4 py-2">Categoria</th>
             <th className="px-4 py-2">Quantidade</th>
             <th className="px-4 py-2">Valor Unitário</th>
             <th className="px-4 py-2">Total</th>
+            <th className="px-4 py-2">Excluir Venda</th>
           </tr>
         </thead>
         <tbody>
-          {Array.isArray(sales.sales) ? (
+          {Array.isArray(sales) && sales.length > 0 ? (
             sales.map(sale => (
-              <tr key={sale.id} className="border-b border-gray-300">
+              <tr
+                key={sale.id}
+                className="text-xl font-medium text-center border-b border-gray-300 "
+              >
                 <td className="px-4 py-2">{sale.customer}</td>
                 <td className="px-4 py-2">{sale.product}</td>
                 <td className="px-4 py-2">{sale.category}</td>
                 <td className="px-4 py-2">{sale.amount}</td>
-                <td className="px-4 py-2">{sale.unitary_value}</td>
-                <td className="px-4 py-2">{sale.total}</td>
+                <td className="px-4 py-2">
+                  <NumericFormat
+                    value={sale.unitary_value}
+                    displayType={'text'}
+                    thousandSeparator="."
+                    decimalSeparator=","
+                    decimalScale={2}
+                    fixedDecimalScale={true}
+                    prefix={'R$ '}
+                  />
+                </td>
+                <td className="px-4 py-2">
+                  {' '}
+                  <NumericFormat
+                    value={sale.total}
+                    displayType={'text'}
+                    thousandSeparator="."
+                    decimalSeparator=","
+                    decimalScale={2}
+                    fixedDecimalScale={true}
+                    prefix={'R$ '}
+                  />
+                </td>
+                <td className="px-4 py-2">
+                  <button onClick={() => handleDeleteSale(sale.id)}>
+                    <FaTrashAlt />
+                  </button>
+                </td>
               </tr>
             ))
           ) : (
@@ -108,9 +237,9 @@ export function SalesTable() {
       {/* Modal para adicionar nova venda */}
       {isNewSaleModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="w-1/2 p-4 bg-white rounded-lg">
+          <div className="w-1/2 p-4 bg-gray-300 rounded-lg">
             <h2 className="mb-4 text-2xl font-bold">Adicionar Nova Venda</h2>
-            <form onSubmit={handleNewSaleSubmit}>
+            <form onSubmit={createSale}>
               {/* ... Campos do formulário para adicionar uma nova venda ... */}
               <div className="mb-4">
                 <label htmlFor="customer" className="block text-gray-600">
@@ -121,6 +250,10 @@ export function SalesTable() {
                   id="customer"
                   name="customer"
                   className="w-full px-3 py-2 border rounded"
+                  required
+                  placeholder="José da Silva"
+                  value={form.customer}
+                  onChange={dataForm}
                 />
               </div>
               <div className="mb-4">
@@ -132,6 +265,10 @@ export function SalesTable() {
                   id="product"
                   name="product"
                   className="w-full px-3 py-2 border rounded"
+                  required
+                  placeholder="Tênis"
+                  value={form.product}
+                  onChange={dataForm}
                 />
               </div>
               <div className="mb-4">
@@ -143,6 +280,10 @@ export function SalesTable() {
                   id="category"
                   name="category"
                   className="w-full px-3 py-2 border rounded"
+                  required
+                  placeholder="Sapatos"
+                  value={form.category}
+                  onChange={dataForm}
                 />
               </div>
               <div className="mb-4">
@@ -154,10 +295,10 @@ export function SalesTable() {
                   id="amount"
                   name="amount"
                   className="w-full px-3 py-2 border rounded"
-                  value={newSaleData.amount}
-                  onChange={e =>
-                    setNewSaleData({ ...newSaleData, amount: e.target.value })
-                  }
+                  required
+                  placeholder="0"
+                  value={form.amount}
+                  onChange={dataForm}
                 />
               </div>
               <div className="mb-4">
@@ -169,29 +310,13 @@ export function SalesTable() {
                   id="unitary_value"
                   name="unitary_value"
                   className="w-full px-3 py-2 border rounded"
-                  value={newSaleData.unitary_value}
-                  onChange={e =>
-                    setNewSaleData({
-                      ...newSaleData,
-                      unitary_value: e.target.value
-                    })
-                  }
+                  required
+                  placeholder="R$ 0,00"
+                  value={form.unitary_value}
+                  onChange={dataForm}
                 />
               </div>
-              <div className="mb-4">
-                <label htmlFor="total" className="block text-gray-600">
-                  Total:
-                </label>
-                <input
-                  type="number"
-                  id="total"
-                  name="total"
-                  className="w-full px-3 py-2 border rounded"
-                  value={newSaleData.total}
-                  readOnly
-                />
-              </div>
-              {/* ... Outros campos ... */}
+
               <div className="text-right">
                 <button
                   type="button"

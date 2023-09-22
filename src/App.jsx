@@ -1,16 +1,11 @@
-import { Login } from './components/Login/Login';
-import { Header } from './components/Header/Header';
-import { SalesModal } from './components/SalesModal/SalesModal';
-import { SalesTable } from './components/SalesTable/SalesTable';
+import { AppRouter } from './routes';
+import { AuthProvider } from './context/AuthContext';
 
 function App() {
   return (
-    <>
-      {/* <Login /> */}
-      {/* <Header /> */}
-      {/* <SalesModal /> */}
-      <SalesTable />
-    </>
+    <AuthProvider>
+      <AppRouter />
+    </AuthProvider>
   );
 }
 
