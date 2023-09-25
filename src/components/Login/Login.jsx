@@ -4,7 +4,7 @@ import {
   signInWithPopup
 } from 'firebase/auth';
 import { Navigate } from 'react-router-dom';
-import { auth } from '../../services/firebase';
+import { auth } from '../../services/Firebase';
 import { RiGithubLine, RiGoogleFill } from 'react-icons/ri';
 import { useState } from 'react';
 import DTDLogo from '../../assets/DTDLogo.png';
