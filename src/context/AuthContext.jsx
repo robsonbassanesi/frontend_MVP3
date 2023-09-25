@@ -6,6 +6,7 @@ import { api } from '../services/api';
 
 export const AuthContext = createContext();
 
+//contexto para autenticação do usuário e armazenamento de dados no backend
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
 

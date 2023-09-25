@@ -5,6 +5,7 @@ import { NumericFormat } from 'react-number-format';
 import { AuthContext } from '../../context/AuthContext';
 import { useContext } from 'react';
 
+//função para exibir, cadastrar e excluir as vendas alem de exibi-las na tabela
 export function SalesTable() {
   const [sales, setSales] = useState([]);
   console.log(sales.length);
@@ -27,6 +28,7 @@ export function SalesTable() {
   const { user, singOut } = useContext(AuthContext);
   const [cotacao, setCotacao] = useState(null);
 
+  //função para buscar as vendas do usuário logado
   const getSales = async userId => {
     try {
       const url = 'http://127.0.0.1:4500/sales?user_id=' + userId;
@@ -43,16 +45,15 @@ export function SalesTable() {
     }
   };
 
+  //useEffect para validar se o usuário está logado e buscar as vendas
   useEffect(() => {
-    // Tente obter os dados do usuário do localStorage
     const savedUserData = localStorage.getItem('userData');
 
     if (savedUserData) {
-      // Se os dados do usuário estiverem no localStorage, atualize o estado e o estado signed
       const userData = JSON.parse(savedUserData);
       setNewUser(userData);
-      setSigned(true); // Usuário está logado
-      getSales(userData.user_id); // Obter vendas quando o usuário está logado
+      setSigned(true);
+      getSales(userData.user_id);
     }
   }, []);
 
@@ -61,6 +62,7 @@ export function SalesTable() {
     setForm({ ...form, [name]: value });
   };
 
+  //função para cadastrar uma nova venda e enviar para o backend
   async function createSale() {
     const formData = new FormData();
     formData.append('customer', form.customer);
@@ -75,6 +77,7 @@ export function SalesTable() {
     });
   }
 
+  //função para excluir uma venda e enviar para o backend
   function handleDeleteSale(id) {
     let url = 'http://127.0.0.1:4500/sale?sale_id=' + id;
 
@@ -83,7 +86,6 @@ export function SalesTable() {
     })
       .then(response => {
         if (response.status === 200) {
-          // A exclusão foi bem-sucedida, recarregue a página
           window.location.reload();
         }
         return response.json();
@@ -93,16 +95,14 @@ export function SalesTable() {
       });
   }
 
+  //useEffect para buscar os dados do usuário no backend e armazenar no localStorage
   useEffect(() => {
-    // Tente obter os dados do usuário do localStorage
     const savedUserData = localStorage.getItem('userData');
     const userId = user.id;
 
     if (savedUserData) {
-      // Se os dados do usuário estiverem no localStorage, atualize o estado
       setUserData(JSON.parse(savedUserData));
     } else {
-      // Caso contrário, faça uma solicitação ao servidor para obter os dados do usuário
       const url = 'http://127.0.0.1:4500/user?user_id=' + userId;
 
       fetch(url, {
@@ -110,17 +110,14 @@ export function SalesTable() {
       })
         .then(response => response.json())
         .then(data => {
-          // Extrair display_name e photo_url dos dados
           const { display_name, photo_url, id } = data;
 
-          // Atualizar o estado com os dados do usuário
           setUserData({
             display_name: display_name,
             photo_url: photo_url,
             user_id: id
           });
 
-          // Salvar os dados do usuário no localStorage
           localStorage.setItem(
             'userData',
             JSON.stringify({
@@ -136,16 +133,14 @@ export function SalesTable() {
     }
   }, []);
 
+  //useEffect para buscar a cotação do dólar em API aberta
   useEffect(() => {
-    // Função para buscar a cotação do dólar
     const fetchDollarCotacao = async () => {
       try {
         const response = await fetch(
           'http://economia.awesomeapi.com.br/json/USD-BRL/1'
         );
         const data = await response.json();
-
-        // Extrair o valor da cotação do dólar dos dados
         const cotacaoAtualizada = data[0]?.ask;
 
         if (cotacaoAtualizada) {
@@ -157,14 +152,10 @@ export function SalesTable() {
         console.error('Erro ao buscar cotação do dólar:', error);
       }
     };
-
-    // Chamar a função imediatamente para obter a primeira cotação
     fetchDollarCotacao();
 
-    // Configurar um intervalo para buscar a cotação a cada 30 segundos
     const intervalId = setInterval(fetchDollarCotacao, 30000);
 
-    // Limpar o intervalo quando o componente é desmontado
     return () => clearInterval(intervalId);
   }, []);
 

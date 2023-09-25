@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 
+//chave de acesso do firebase
 const firebaseConfig = {
   apiKey: 'AIzaSyDX8Ssn868Ldbe1QCKjj6BNJzXucQLmEFY',
   authDomain: 'crm-dtd.firebaseapp.com',

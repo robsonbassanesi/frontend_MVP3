@@ -11,10 +11,12 @@ import DTDLogo from '../../assets/DTDLogo.png';
 import { AuthContext } from '../../context/AuthContext';
 import { useContext } from 'react';
 
+//função para processar o login do usuário
 export function Login() {
   const [user, setUser] = useState({});
   const { signed, signIn } = useContext(AuthContext);
 
+  //envia os dados do usuário para o backend
   function handleLogin(data) {
     const postData = new FormData();
     postData.append('display_name', data.displayName);
@@ -25,6 +27,7 @@ export function Login() {
     return signIn(postData);
   }
 
+  //função para logar com o google
   function handleGoogleLogin() {
     const provider = new GoogleAuthProvider();
     signInWithPopup(auth, provider)
@@ -33,7 +36,6 @@ export function Login() {
           alert('Usuário já logado');
         } else {
           setUser(result.user);
-          // Chame a função para enviar os dados ao servidor
           handleLogin(result.user);
         }
       })
@@ -41,7 +43,7 @@ export function Login() {
         console.log(error);
       });
   }
-
+  //função para logar com o github
   function handleGithubLogin() {
     const provider = new GithubAuthProvider();
     signInWithPopup(auth, provider)
@@ -50,8 +52,6 @@ export function Login() {
           alert('Usuário já logado');
         } else {
           setUser(result.user);
-
-          // Chame a função para enviar os dados ao servidor
           handleLogin(result.user);
         }
       })
